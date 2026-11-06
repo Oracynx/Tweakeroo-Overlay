@@ -1,0 +1,33 @@
+{
+	"schemaVersion": 1,
+	"id": "tweakeroo_overlay",
+	"version": "${version}",
+	"name": "Tweakeroo Overlay",
+	"description": "Shows the currently enabled Tweakeroo (and Tweakeroo add-on) feature toggles in a right-aligned HUD list in a screen corner.",
+	"authors": [
+		"Tweakeroo Overlay contributors"
+	],
+	"contact": {
+		"homepage": "https://modrinth.com/mod/tweakeroo-overlay"
+	},
+	"license": "MIT",
+	"icon": "assets/tweakeroo_overlay/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"main": [
+			"io.github.tweakeroooverlay.TweakerooOverlayClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": ">=26.3 <26.4",
+		"java": ">=25",
+		"fabric-api": "*",
+		"malilib": ">=0.30.0-",
+		"tweakeroo": ">=0.30.0-"
+	},
+	"suggests": {
+		"tweakermore": "*",
+		"eclipsestweakeroo": "*"
+	}
+}

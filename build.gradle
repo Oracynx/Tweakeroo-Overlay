@@ -1,0 +1,114 @@
+plugins {
+	// Minecraft 26.x is no longer obfuscated, so the regular (non-remapping) Loom plugin is used.
+	// The old "net.fabricmc.fabric-loom-remap" plugin + Yarn/Mojang mappings are only needed for <= 1.21.x.
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// MaLiLib / Tweakeroo are published here by the current maintainer (sakura-ryoko).
+	// The artifacts are regular (non-remapped) jars for Minecraft 26.x.
+	maven {
+		name = 'Masa'
+		url = 'https://masa.dy.fi/maven/sakura-ryoko'
+		content {
+			includeGroup 'fi.dy.masa.malilib'
+			includeGroup 'fi.dy.masa.tweakeroo'
+		}
+	}
+
+	// Transitive dependency of MaLiLib / TweakerMore for conditional mixins.
+	maven {
+		name = 'FallenBreath'
+		url = 'https://maven.fallenbreath.me/releases'
+		content {
+			includeGroup 'me.fallenbreath'
+		}
+	}
+}
+
+loom {
+	// This is a client-only mod, so a single (non-split) source set is used. That keeps the
+	// Minecraft-independent logic and the client rendering code in the same source set, which
+	// also makes the JUnit tests work without extra source set wiring.
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// ---- Tweakeroo / MaLiLib integration -------------------------------------
+	// These are provided at runtime by the user's mod folder, therefore compileOnly
+	// (and runtimeOnly so that `runClient` can be used to test the mod in dev).
+	// Keep the versions in gradle.properties in sync with the versions you test against.
+	compileOnly "fi.dy.masa.malilib:malilib-fabric-${project.minecraft_version}:${project.malilib_version}"
+	compileOnly "fi.dy.masa.tweakeroo:tweakeroo-fabric-${project.minecraft_version}:${project.tweakeroo_version}"
+
+	runtimeOnly "fi.dy.masa.malilib:malilib-fabric-${project.minecraft_version}:${project.malilib_version}"
+	runtimeOnly "fi.dy.masa.tweakeroo:tweakeroo-fabric-${project.minecraft_version}:${project.tweakeroo_version}"
+
+	// ---- Unit tests ----------------------------------------------------------
+	testImplementation platform("org.junit:junit-bom:${project.junit_version}")
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+processResources {
+	def props = [
+		version   : project.version,
+		mod_id    : 'tweakeroo_overlay',
+		malilib   : project.malilib_version,
+		tweakeroo : project.tweakeroo_version,
+		mc        : project.minecraft_version
+	]
+	inputs.properties props
+
+	filesMatching('fabric.mod.json') {
+		expand props
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = 'UTF-8'
+}
+
+java {
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+test {
+	useJUnitPlatform()
+}
+
+jar {
+	def projectName = project.name
+	inputs.property 'projectName', projectName
+
+	from('LICENSE') {
+		rename { "${it}_$projectName" }
+	}
+}
+
+publishing {
+	publications {
+		create('mavenJava', MavenPublication) {
+			from components.java
+		}
+	}
+
+	repositories {
+		// Add repositories to publish to here.
+	}
+}
