@@ -5,7 +5,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 
 /**
- * The mod's own key binding (registered through the Fabric key mapping API).
+ * The mod's own key bindings (registered through the Fabric key mapping API).
  */
 public final class KeyBindings {
 	public static final KeyMapping.Category CATEGORY =
@@ -18,5 +18,14 @@ public final class KeyBindings {
 	public static KeyMapping createToggleKey() {
 		return new KeyMapping("key.tweakeroo_overlay.toggle",
 			InputConstants.Type.KEYBOARD, InputConstants.KEY_F6, CATEGORY);
+	}
+
+	/**
+	 * @return the key binding that captures (or clears) the change-tracking baseline, defaulting
+	 *         to F7
+	 */
+	public static KeyMapping createBaselineKey() {
+		return new KeyMapping("key.tweakeroo_overlay.capture_baseline",
+			InputConstants.Type.KEYBOARD, InputConstants.KEY_F7, CATEGORY);
 	}
 }

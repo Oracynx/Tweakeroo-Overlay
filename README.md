@@ -14,6 +14,9 @@ Tweakeroo feature toggles in a screen corner. One feature per line, green by def
 
 - **实时显示已启用的 Tweakeroo 功能**：直接读取 `FeatureToggle` 的当前值，用热键开关功能后
   无需任何操作即可立即反映到悬浮列表中。
+- **变更追踪**：按 `F7` 记录当前已启用的功能作为基准；之后**只显示发生变化的功能**（仅显示
+  功能名，无额外标记）：新开启的显示为绿色，新关闭的显示为红色，未变化的功能自动隐藏；再按一次
+  `F7` 清除基准。
 - **默认右上角、右对齐、每行一个、绿色**；颜色、位置、缩放、背景、行距、排序等均可配置。
 - **可扩展、能适配其他 Tweakeroo 附属模组**：
   - 自动发现其他依赖/提及 Tweakeroo 的附属模组（例如 [TweakerMore](https://modrinth.com/mod/tweakermore)、
@@ -45,7 +48,8 @@ Tweakeroo feature toggles in a screen corner. One feature per line, green by def
 1. 安装 Fabric Loader 0.20.1+ 与 Fabric API；
 2. 将 `tweakeroo-overlay-1.0.0.jar` 放入 `mods/` 文件夹；
 3. 同时安装 MaLiLib 与 Tweakeroo；
-4. 启动游戏，默认在右上角显示已启用的 Tweakeroo 功能；按 `F6` 开关悬浮列表。
+4. 启动游戏，默认在右上角显示已启用的 Tweakeroo 功能；按 `F6` 开关悬浮列表，按 `F7` 记录/
+   清除变更基准。
 
 ## 配置 / Configuration
 
@@ -68,6 +72,11 @@ Tweakeroo feature toggles in a screen corner. One feature per line, green by def
   "showDisabled": false,
   "enabledColor": -11141291,
   "disabledColor": -5592406,
+  "newlyEnabledColor": -16711936,
+  "newlyDisabledColor": -43691,
+  "baselineActive": false,
+  "baselineFeatures": [],
+  "diffOnlyChanged": true,
   "showProviderName": false,
   "sortMode": "CONFIG_ORDER",
   "maxLines": 0,
@@ -97,6 +106,9 @@ Tweakeroo feature toggles in a screen corner. One feature per line, green by def
 | `showShadow` | 是否绘制文字阴影 |
 | `showDisabled` | 是否显示未启用的功能（使用 `disabledColor`） |
 | `enabledColor` / `disabledColor` | 启用/未启用的文字颜色（ARGB，默认绿色 `0xFF55FF55`） |
+| `newlyEnabledColor` / `newlyDisabledColor` | 相对基准新开启/新关闭功能的颜色（ARGB，默认亮绿/红） |
+| `baselineActive` / `baselineFeatures` | 变更基准是否激活、基准中记录的功能 ID（由 F7 自动维护，一般无需手改） |
+| `diffOnlyChanged` | 基准激活时只显示相对基准发生变化的功能（默认 `true`，即未变化项不显示）；设为 `false` 则显示全部功能并仅高亮变化项 |
 | `showProviderName` | 是否在每行前加 `[模组名]` 前缀 |
 | `sortMode` | 排序：`CONFIG_ORDER`（默认，Tweakeroo 配置顺序）/ `ALPHABETICAL` / `MOD_THEN_ALPHABETICAL` |
 | `maxLines` | 最多显示行数，`0` 表示不限制 |
@@ -110,6 +122,20 @@ Tweakeroo feature toggles in a screen corner. One feature per line, green by def
 | `hiddenFeatures` | 永不显示的功能 ID 列表（可写 `tweakeroo:tweakFastBlockPlacement` 或 `tweakFastBlockPlacement`） |
 | `hiddenMods` / `visibleMods` | 按模组 ID 黑名单 / 白名单（`visibleMods` 非空时只显示其中的模组） |
 | `hideWithDebugScreen` / `hideInScreens` | F3 调试界面 / 任意 GUI 界面打开时隐藏 |
+
+## 变更追踪 / Change tracking
+
+按下 `F7`（可在“控制”中改键）会把当前所有已启用功能记录为基准。之后**只显示相对基准发生变化的功能**（仅显示功能名，无额外标注）：
+
+- **新开启**的功能：使用 `newlyEnabledColor`（默认绿色）显示；
+- **新关闭**的功能：使用 `newlyDisabledColor`（默认红色）显示，即使 `showDisabled` 为 `false` 也会显示；
+- **未变化**的功能：默认不显示；
+- 再按一次 `F7` 清除基准，恢复普通的已启用功能列表；
+- 基准会写入配置文件，重启游戏后依然有效。
+
+如果希望在基准激活时仍然显示全部功能、只把变化项高亮，可设置 `diffOnlyChanged: false`。
+基准按功能 ID 记录，因此只影响当前仍然存在的功能；`hiddenFeatures`、`hiddenMods`、`visibleMods`
+等过滤规则对变化行同样生效。
 
 ## 给附属模组开发者的扩展 API / Add-on API
 
@@ -187,7 +213,7 @@ public final class MyOverlayFeatureProvider implements FeatureProvider {
 ./gradlew build        # Windows: gradlew.bat build
 ```
 
-产物：`build/libs/tweakeroo-overlay-1.0.0.jar`（另外会生成 sources jar）。
+产物：`build/libs/tweakeroo-overlay-1.1.1.jar`（另外会生成 sources jar）。
 
 其他常用任务：
 
@@ -224,7 +250,8 @@ src/test/java/                         # JUnit 5 单元测试
 - 仅客户端；不会同步到服务器，也不会出现在其他玩家的画面上。
 - 自动发现依赖 MaLiLib 配置界面/配置类结构，未遵循这些结构的模组请使用自定义 entrypoint API。
 - 通过 Mixin 直接注入 Tweakeroo 配置列表的附属模组会被当作 Tweakeroo 的功能显示（无法区分归属）。
-- 修改配置文件后需要重启游戏；F6 开关会立即生效并写回配置。
+- 修改配置文件后需要重启游戏；F6/F7 开关会立即生效并写回配置。
+- 变更追踪按功能 ID 记录基准；模组更新导致功能改名/移除时，该功能会从对比结果中消失。
 - 本模组是非官方附属模组，与 masa / sakura-ryoko、Tweakeroo 官方无关；"Tweakeroo" 名称仅用于说明用途。
 
 ## 许可证 / License

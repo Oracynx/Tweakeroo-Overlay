@@ -4,6 +4,7 @@ import fi.dy.masa.malilib.event.RenderEventHandler;
 import fi.dy.masa.malilib.util.InfoUtils;
 import fi.dy.masa.malilib.util.StringUtils;
 import io.github.tweakeroooverlay.TweakerooOverlayClient;
+import io.github.tweakeroooverlay.api.FeatureEntry;
 import io.github.tweakeroooverlay.api.FeatureProvider;
 import io.github.tweakeroooverlay.api.FeatureProviderRegistry;
 import io.github.tweakeroooverlay.api.FeatureSnapshot;
@@ -20,11 +21,13 @@ import net.minecraft.client.KeyMapping;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Owns the overlay state: the loaded config, the feature providers, the (throttled) feature
- * snapshot and the key binding handling.
+ * snapshot, the change-tracking baseline and the key binding handling.
  */
 public final class OverlayController {
 	/** Name of the Fabric custom entrypoint that third-party mods can implement to add providers. */
@@ -38,6 +41,7 @@ public final class OverlayController {
 	private final OverlayConfig config;
 	private final FeatureProviderRegistry providers = new FeatureProviderRegistry();
 	private final KeyMapping toggleKey;
+	private final KeyMapping baselineKey;
 	private final OverlayRenderer renderer = new OverlayRenderer(this);
 
 	private FeatureSnapshot snapshot = new FeatureSnapshot(List.of(), List.of());
@@ -56,13 +60,15 @@ public final class OverlayController {
 		}
 
 		this.toggleKey = KeyBindings.createToggleKey();
+		this.baselineKey = KeyBindings.createBaselineKey();
 	}
 
 	/** Called from the Fabric mod initializer. */
 	public void initialize() {
-		// The key binding has to be registered while the mods are being initialized, so that it
-		// shows up in the vanilla controls screen.
+		// The key bindings have to be registered while the mods are being initialized, so that they
+		// show up in the vanilla controls screen.
 		KeyMappingHelper.registerKeyMapping(this.toggleKey);
+		KeyMappingHelper.registerKeyMapping(this.baselineKey);
 		ClientTickEvents.END_CLIENT_TICK.register(client -> this.onClientTick());
 
 		this.registerBuiltinProviders();
@@ -80,6 +86,10 @@ public final class OverlayController {
 	}
 
 	private void onClientTick() {
+		while (this.baselineKey.consumeClick()) {
+			this.toggleBaseline();
+		}
+
 		while (this.toggleKey.consumeClick()) {
 			this.toggleOverlay();
 		}
@@ -121,7 +131,8 @@ public final class OverlayController {
 
 	private void refreshFeatures() {
 		this.lastRefreshNanos = System.nanoTime();
-		this.snapshot = FeatureListBuilder.build(this.providers.providers(), this.config);
+		Set<String> baseline = this.config.baselineActive ? Set.copyOf(this.config.baselineFeatures) : null;
+		this.snapshot = FeatureListBuilder.build(this.providers.providers(), this.config, baseline);
 
 		List<String> errors = this.snapshot.errors();
 
@@ -134,6 +145,44 @@ public final class OverlayController {
 		}
 	}
 
+	/**
+	 * Captures the currently enabled features as the change-tracking baseline, or clears the
+	 * existing baseline when one is already active.
+	 */
+	private void toggleBaseline() {
+		if (this.config.baselineActive) {
+			this.config.baselineActive = false;
+			this.config.baselineFeatures.clear();
+			printMessage("tweakeroo_overlay.message.baseline_cleared");
+		} else {
+			// Capture from a copy without the display limiting options, so features that are not
+			// currently rendered (e.g. due to maxLines or a hidden-mod filter) are still part of
+			// the baseline if they are enabled.
+			OverlayConfig captureConfig = this.config.copy();
+			captureConfig.maxLines = 0;
+			captureConfig.showDisabled = false;
+			captureConfig.baselineActive = false;
+			captureConfig.diffOnlyChanged = false;
+			captureConfig.hiddenFeatures = new ArrayList<>();
+			captureConfig.hiddenMods = new ArrayList<>();
+			captureConfig.visibleMods = new ArrayList<>();
+
+			FeatureSnapshot captured = FeatureListBuilder.build(this.providers.providers(), captureConfig, null);
+
+			this.config.baselineFeatures = captured.entries().stream()
+				.filter(FeatureEntry::enabled)
+				.map(FeatureEntry::id)
+				.distinct()
+				.collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+			this.config.baselineActive = true;
+
+			printMessage("tweakeroo_overlay.message.baseline_captured", this.config.baselineFeatures.size());
+		}
+
+		this.saveConfig();
+		this.refreshFeatures();
+	}
+
 	private void toggleOverlay() {
 		this.config.enabled = this.config.enabled == false;
 		this.saveConfig();
@@ -142,6 +191,14 @@ public final class OverlayController {
 		try {
 			InfoUtils.printBooleanConfigToggleMessage(
 				StringUtils.translate("tweakeroo_overlay.name"), this.config.enabled);
+		} catch (Throwable ignored) {
+			// The message is a nicety only.
+		}
+	}
+
+	private static void printMessage(String translationKey, Object... args) {
+		try {
+			InfoUtils.printActionbarMessage(translationKey, args);
 		} catch (Throwable ignored) {
 			// The message is a nicety only.
 		}

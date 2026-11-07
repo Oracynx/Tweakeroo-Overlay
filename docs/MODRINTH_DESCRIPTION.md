@@ -9,12 +9,13 @@ Built for **Minecraft 26.3** on **Fabric**.
 ## Features
 
 - **Always up to date** — reads Tweakeroo's `FeatureToggle` values directly, so a feature toggled by its hotkey appears (or disappears) in the overlay immediately.
+- **Track what changed** — press **F7** to remember the currently enabled features as a baseline. From then on, only the features whose state changed are shown: newly enabled features in green, newly disabled features in red, and unchanged features are hidden. Only the feature names are displayed, with no extra markers. Press F7 again to clear the baseline.
 - **Clean default look** — top-right corner, right-aligned, one feature per line in Minecraft green, with a subtle background box.
 - **Fully configurable** — corner and offset, scale, background and colours, line spacing, text shadow, sort order, maximum line count, showing disabled features, per-mod name prefixes, and more.
 - **Works with other Tweakeroo add-ons** — automatically discovers feature toggles of add-ons that use MaLiLib's config system, such as [TweakerMore](https://modrinth.com/mod/tweakermore) and [Eclipse's Tweakeroo Additions](https://modrinth.com/mod/eclipses-tweakeroo-additions). A small public API lets any add-on provide its own lines as well.
 - **Safe and read-only** — never writes Tweakeroo or MaLiLib configs and never takes over hotkey callbacks; it only polls values. Every provider and render error is caught and degrades gracefully instead of crashing the game.
 - **Out of the way** — hides automatically while a GUI screen or the F3 debug screen is open (both configurable), and respects the vanilla F1 "hide HUD" state.
-- **Toggle on the fly** — press **F6** (rebindable in Controls) to hide or show the overlay; the state is saved.
+- **Toggle on the fly** — press **F6** (rebindable in Controls) to hide or show the overlay; the state is saved. **F7** captures or clears the change-tracking baseline.
 - **Localized** — English and Simplified Chinese included.
 
 ## Requirements
@@ -35,7 +36,7 @@ This mod is **client-side only**. Do not install it on a server.
 1. Install Fabric Loader 0.20.1+ for Minecraft 26.3 and put Fabric API in your `mods/` folder.
 2. Install MaLiLib and Tweakeroo (Tweakeroo Overlay does not bundle them).
 3. Put `tweakeroo-overlay-<version>.jar` into your `mods/` folder.
-4. Launch the game. The overlay appears in the top-right corner; press **F6** to toggle it.
+4. Launch the game. The overlay appears in the top-right corner; press **F6** to toggle it and **F7** to capture or clear a change baseline.
 
 ## Configuration
 
@@ -57,6 +58,11 @@ The config file is created on first launch at `config/tweakeroo-overlay.json`. I
   "showDisabled": false,
   "enabledColor": -11141291,
   "disabledColor": -5592406,
+  "newlyEnabledColor": -16711936,
+  "newlyDisabledColor": -43691,
+  "baselineActive": false,
+  "baselineFeatures": [],
+  "diffOnlyChanged": true,
   "showProviderName": false,
   "sortMode": "CONFIG_ORDER",
   "maxLines": 0,
@@ -86,6 +92,9 @@ The config file is created on first launch at `config/tweakeroo-overlay.json`. I
 | `showShadow` | Draw the vanilla text shadow. |
 | `showDisabled` | Also list features that are currently disabled, using `disabledColor`. |
 | `enabledColor` / `disabledColor` | Text colours (ARGB). Enabled defaults to green `-11141291`. |
+| `newlyEnabledColor` / `newlyDisabledColor` | Highlight colours for features that were newly enabled / newly disabled since the baseline was captured (ARGB, bright green / red by default). |
+| `baselineActive` / `baselineFeatures` | Whether a change-tracking baseline is active, and the feature IDs it contains. Managed automatically by the F7 key bind. |
+| `diffOnlyChanged` | When a baseline is active, show only the features whose state changed since it. `true` (default) hides unchanged features; set it to `false` to keep showing everything and only highlight the changes. |
 | `showProviderName` | Prefix each line with `[mod name]`. |
 | `sortMode` | `CONFIG_ORDER` (Tweakeroo config order, default), `ALPHABETICAL`, or `MOD_THEN_ALPHABETICAL`. |
 | `maxLines` | Maximum number of rendered lines; `0` means unlimited. |
@@ -99,6 +108,18 @@ The config file is created on first launch at `config/tweakeroo-overlay.json`. I
 | `hiddenFeatures` | Feature IDs that are never shown. Both `tweakeroo:tweakFastBlockPlacement` and `tweakFastBlockPlacement` are accepted. |
 | `hiddenMods` / `visibleMods` | Mod ID blacklist / whitelist. When `visibleMods` is non-empty, only those mods are shown. |
 | `hideWithDebugScreen` / `hideInScreens` | Hide the overlay while the F3 debug screen / any GUI screen is open. |
+
+## Change tracking
+
+Press **F7** (rebindable in Controls) to remember all currently enabled features as a baseline. From then on, the overlay shows **only the features whose state changed**, with just their names and a colour:
+
+- features that become enabled afterwards are shown in `newlyEnabledColor` (green by default);
+- features that were enabled at capture time and are now disabled are shown in `newlyDisabledColor` (red by default) — these lines are shown even when `showDisabled` is `false`;
+- unchanged features are hidden;
+- press **F7** again to clear the baseline and return to the normal list of enabled features;
+- the baseline is saved in the config file, so it survives a restart.
+
+Set `diffOnlyChanged` to `false` if you would rather keep showing all features and only highlight the changed ones. The baseline is stored as feature IDs, so a feature that is removed or renamed by a mod update simply drops out of the comparison. The usual filters (`hiddenFeatures`, `hiddenMods`, `visibleMods`) also apply to the changed lines.
 
 ## Works with other Tweakeroo add-ons
 
@@ -170,6 +191,7 @@ public final class MyOverlayFeatureProvider implements FeatureProvider {
 - Add-ons that inject toggles directly into Tweakeroo's config list with Mixins (for example the Slime & Honey add-on) are shown as Tweakeroo features, since their true origin cannot be detected.
 - Auto-discovery only covers mods that go through MaLiLib's config system; other mods should use the provider API.
 - Vanilla status-effect icons share the top-right corner. If you play with many active effects, increase `offsetY` or choose a different `corner`.
+- Change tracking compares feature IDs; a feature that is renamed or removed by a mod update drops out of the comparison.
 - This is an unofficial add-on. It is not affiliated with Tweakeroo's authors, and a future major Tweakeroo rewrite could require an update here as well.
 
 ## Credits

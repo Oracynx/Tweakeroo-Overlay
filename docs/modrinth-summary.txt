@@ -1,1 +1,1 @@
-A lightweight client-side Tweakeroo add-on that lists your currently enabled Tweakeroo features in a clean, right-aligned HUD overlay — one feature per line, green by default.
+A lightweight client-side Tweakeroo add-on: a right-aligned HUD list of enabled features, plus a snapshot mode that shows only what changed since you pressed F7.

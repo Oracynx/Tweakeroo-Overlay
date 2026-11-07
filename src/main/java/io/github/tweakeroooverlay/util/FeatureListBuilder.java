@@ -1,5 +1,6 @@
 package io.github.tweakeroooverlay.util;
 
+import io.github.tweakeroooverlay.api.DiffState;
 import io.github.tweakeroooverlay.api.FeatureEntry;
 import io.github.tweakeroooverlay.api.FeatureProvider;
 import io.github.tweakeroooverlay.api.FeatureSnapshot;
@@ -11,6 +12,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Pure (Minecraft independent) logic that merges the output of all feature providers, applies the
@@ -25,6 +27,17 @@ public final class FeatureListBuilder {
 	}
 
 	public static FeatureSnapshot build(Collection<FeatureProvider> providers, OverlayConfig config) {
+		return build(providers, config, null);
+	}
+
+	/**
+	 * @param diffBaseline the feature ids that were enabled when the baseline was captured, or
+	 *                     {@code null} if no baseline is active. Newly enabled features are marked
+	 *                     {@link DiffState#NEWLY_ENABLED}, features that were enabled at capture
+	 *                     time but are disabled now are marked {@link DiffState#NEWLY_DISABLED}.
+	 */
+	public static FeatureSnapshot build(Collection<FeatureProvider> providers, OverlayConfig config,
+			Set<String> diffBaseline) {
 		OverlayConfig safeConfig = config == null ? new OverlayConfig() : config;
 		List<FeatureProvider> sortedProviders = new ArrayList<>(providers == null ? List.of() : providers);
 		// Lower priority value wins, so explicit third-party providers override auto-discovery.
@@ -58,9 +71,13 @@ public final class FeatureListBuilder {
 		}
 
 		List<FeatureEntry> entries = new ArrayList<>(byId.size());
+		Map<String, DiffState> diffStates = new LinkedHashMap<>();
 
 		for (FeatureEntry entry : byId.values()) {
-			if (isEntryVisible(entry, safeConfig)) {
+			DiffState diffState = diffStateOf(entry, diffBaseline);
+			diffStates.put(entry.id(), diffState);
+
+			if (isEntryVisible(entry, safeConfig, diffState)) {
 				entries.add(entry);
 			}
 		}
@@ -71,7 +88,25 @@ public final class FeatureListBuilder {
 			entries = new ArrayList<>(entries.subList(0, safeConfig.maxLines));
 		}
 
-		return new FeatureSnapshot(entries, errors);
+		return new FeatureSnapshot(entries, errors, diffStates);
+	}
+
+	private static DiffState diffStateOf(FeatureEntry entry, Set<String> baseline) {
+		if (baseline == null) {
+			return DiffState.UNCHANGED;
+		}
+
+		boolean wasEnabled = baseline.contains(entry.id());
+
+		if (entry.enabled() && !wasEnabled) {
+			return DiffState.NEWLY_ENABLED;
+		}
+
+		if (!entry.enabled() && wasEnabled) {
+			return DiffState.NEWLY_DISABLED;
+		}
+
+		return DiffState.UNCHANGED;
 	}
 
 	private static boolean isProviderEnabled(FeatureProvider provider, OverlayConfig config) {
@@ -82,11 +117,7 @@ public final class FeatureListBuilder {
 		};
 	}
 
-	private static boolean isEntryVisible(FeatureEntry entry, OverlayConfig config) {
-		if (!entry.enabled() && !config.showDisabled) {
-			return false;
-		}
-
+	private static boolean isEntryVisible(FeatureEntry entry, OverlayConfig config, DiffState diffState) {
 		if (!config.visibleMods.isEmpty() && !config.visibleMods.contains(entry.modId())) {
 			return false;
 		}
@@ -99,6 +130,21 @@ public final class FeatureListBuilder {
 			if (entry.matchesId(hidden)) {
 				return false;
 			}
+		}
+
+		// Features that were enabled when the baseline was captured and are disabled now are
+		// always shown in red, even when disabled features are otherwise hidden, otherwise the
+		// "what did I just turn off?" information would be invisible.
+		if (diffState == DiffState.NEWLY_DISABLED) {
+			return true;
+		}
+
+		if (config.baselineActive && config.diffOnlyChanged && diffState == DiffState.UNCHANGED) {
+			return false;
+		}
+
+		if (!entry.enabled() && !config.showDisabled) {
+			return false;
 		}
 
 		return true;

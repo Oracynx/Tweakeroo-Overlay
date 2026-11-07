@@ -49,6 +49,28 @@ public final class OverlayConfig {
 	/** Colour for disabled features (ARGB), only used when {@link #showDisabled} is true. */
 	public int disabledColor = 0xFFAAAAAA;
 
+	/** Colour for features that were disabled when the baseline was captured and are enabled now (ARGB). */
+	public int newlyEnabledColor = 0xFF00FF00;
+
+	/** Colour for features that were enabled when the baseline was captured and are disabled now (ARGB). */
+	public int newlyDisabledColor = 0xFFFF5555;
+
+	// ---- Change tracking ("capture / clear baseline" key binding) ----
+
+	/** Whether a captured baseline is active and the change highlighting is enabled. */
+	public boolean baselineActive = false;
+
+	/** Feature ids that were enabled when the baseline was captured (managed automatically). */
+	public List<String> baselineFeatures = new ArrayList<>();
+
+	/**
+	 * When a baseline is active, only render features whose state changed since the baseline.
+	 * This is the default: the change tracking is meant to answer "what changed since my
+	 * snapshot?". Set to {@code false} to keep showing all features and only highlight the
+	 * changed ones instead.
+	 */
+	public boolean diffOnlyChanged = true;
+
 	/** Prefix every line with the owning mod name, e.g. {@code [Tweakeroo] Fast Placement}. */
 	public boolean showProviderName = false;
 
@@ -129,6 +151,7 @@ public final class OverlayConfig {
 		hiddenMods = sanitizeList(hiddenMods);
 		visibleMods = sanitizeList(visibleMods);
 		extraAddonModIds = sanitizeList(extraAddonModIds);
+		baselineFeatures = sanitizeList(baselineFeatures);
 
 		return this;
 	}
@@ -149,6 +172,11 @@ public final class OverlayConfig {
 		copy.showDisabled = this.showDisabled;
 		copy.enabledColor = this.enabledColor;
 		copy.disabledColor = this.disabledColor;
+		copy.newlyEnabledColor = this.newlyEnabledColor;
+		copy.newlyDisabledColor = this.newlyDisabledColor;
+		copy.baselineActive = this.baselineActive;
+		copy.baselineFeatures = new ArrayList<>(this.baselineFeatures);
+		copy.diffOnlyChanged = this.diffOnlyChanged;
 		copy.showProviderName = this.showProviderName;
 		copy.sortMode = this.sortMode;
 		copy.maxLines = this.maxLines;

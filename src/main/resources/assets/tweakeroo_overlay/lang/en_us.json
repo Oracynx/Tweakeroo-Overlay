@@ -1,5 +1,8 @@
 {
   "tweakeroo_overlay.name": "Tweakeroo Overlay",
   "key.tweakeroo_overlay.toggle": "Toggle Overlay",
-  "key.categories.tweakeroo_overlay.main": "Tweakeroo Overlay"
+  "key.tweakeroo_overlay.capture_baseline": "Capture / clear change baseline",
+  "key.categories.tweakeroo_overlay.main": "Tweakeroo Overlay",
+  "tweakeroo_overlay.message.baseline_captured": "Tweakeroo Overlay: baseline captured (%s enabled features) - now showing changes only",
+  "tweakeroo_overlay.message.baseline_cleared": "Tweakeroo Overlay: baseline cleared"
 }

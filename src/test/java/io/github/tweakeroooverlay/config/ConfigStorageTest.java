@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -37,6 +38,11 @@ class ConfigStorageTest {
 		config.enabledColor = 0xFF00FF00;
 		config.hiddenFeatures.add("tweakeroo:tweakFastBlockPlacement");
 		config.extraAddonModIds.add("tweakermore");
+		config.baselineActive = true;
+		config.baselineFeatures.add("tweakeroo:tweakZoom");
+		config.diffOnlyChanged = true;
+		config.newlyEnabledColor = 0xFF00FF00;
+		config.newlyDisabledColor = 0xFFFF0000;
 		storage.save(config);
 
 		assertTrue(Files.exists(file));
@@ -49,6 +55,11 @@ class ConfigStorageTest {
 		assertEquals(0xFF00FF00, loaded.enabledColor);
 		assertEquals(1, loaded.hiddenFeatures.size());
 		assertEquals("tweakermore", loaded.extraAddonModIds.getFirst());
+		assertTrue(loaded.baselineActive);
+		assertEquals(List.of("tweakeroo:tweakZoom"), loaded.baselineFeatures);
+		assertTrue(loaded.diffOnlyChanged);
+		assertEquals(0xFF00FF00, loaded.newlyEnabledColor);
+		assertEquals(0xFFFF0000, loaded.newlyDisabledColor);
 	}
 
 	@Test

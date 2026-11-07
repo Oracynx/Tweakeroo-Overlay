@@ -80,4 +80,30 @@ class OverlayConfigTest {
 		assertEquals(1, config.hiddenFeatures.size());
 		assertEquals(2, copy.hiddenFeatures.size());
 	}
+
+	@Test
+	void copyIsDeepForBaselineFeatures() {
+		OverlayConfig config = new OverlayConfig();
+		config.baselineActive = true;
+		config.baselineFeatures.add("tweakeroo:tweakFastBlockPlacement");
+		config.diffOnlyChanged = true;
+
+		OverlayConfig copy = config.copy();
+		copy.baselineFeatures.add("tweakeroo:tweakZoom");
+
+		assertTrue(copy.baselineActive);
+		assertTrue(copy.diffOnlyChanged);
+		assertEquals(1, config.baselineFeatures.size());
+		assertEquals(2, copy.baselineFeatures.size());
+	}
+
+	@Test
+	void changeTrackingShowsOnlyChangesByDefault() {
+		OverlayConfig config = new OverlayConfig();
+
+		assertTrue(config.diffOnlyChanged, "change tracking should only show changed features by default");
+		assertTrue(config.baselineActive == false);
+		assertTrue(config.showProviderName == false, "no extra labels/markers by default");
+		assertTrue(config.showDisabled == false);
+	}
 }

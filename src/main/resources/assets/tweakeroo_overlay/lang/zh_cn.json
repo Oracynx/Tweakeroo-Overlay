@@ -1,5 +1,8 @@
 {
   "tweakeroo_overlay.name": "Tweakeroo 悬浮显示",
   "key.tweakeroo_overlay.toggle": "开关悬浮显示",
-  "key.categories.tweakeroo_overlay.main": "Tweakeroo 悬浮显示"
+  "key.tweakeroo_overlay.capture_baseline": "记录/清除差异基准",
+  "key.categories.tweakeroo_overlay.main": "Tweakeroo 悬浮显示",
+  "tweakeroo_overlay.message.baseline_captured": "Tweakeroo 悬浮显示：已记录基准（%s 个已启用功能），此后只显示变化项",
+  "tweakeroo_overlay.message.baseline_cleared": "Tweakeroo 悬浮显示：已清除基准"
 }

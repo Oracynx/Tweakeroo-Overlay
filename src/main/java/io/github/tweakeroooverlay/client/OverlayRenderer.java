@@ -4,10 +4,12 @@ import fi.dy.masa.malilib.interfaces.IRenderer;
 import fi.dy.masa.malilib.render.GuiContext;
 import fi.dy.masa.malilib.util.GuiUtils;
 import io.github.tweakeroooverlay.TweakerooOverlayClient;
+import io.github.tweakeroooverlay.api.DiffState;
 import io.github.tweakeroooverlay.api.FeatureEntry;
 import io.github.tweakeroooverlay.api.FeatureSnapshot;
 import io.github.tweakeroooverlay.config.OverlayConfig;
 import io.github.tweakeroooverlay.feature.AddonDetector;
+import io.github.tweakeroooverlay.util.FeatureColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.DebugScreenOverlay;
@@ -40,14 +42,13 @@ public final class OverlayRenderer implements IRenderer {
 		}
 
 		FeatureSnapshot snapshot = this.controller.snapshot();
-		List<FeatureEntry> entries = snapshot.entries();
 
-		if (entries.isEmpty()) {
+		if (snapshot.entries().isEmpty()) {
 			return;
 		}
 
 		try {
-			this.render(ctx, config, entries);
+			this.render(ctx, config, snapshot);
 		} catch (Throwable t) {
 			// A rendering error must never take down the game.
 			TweakerooOverlayClient.LOGGER.error("[Tweakeroo Overlay] Failed to render the overlay", t);
@@ -86,7 +87,8 @@ public final class OverlayRenderer implements IRenderer {
 		return true;
 	}
 
-	private void render(GuiContext ctx, OverlayConfig config, List<FeatureEntry> entries) {
+	private void render(GuiContext ctx, OverlayConfig config, FeatureSnapshot snapshot) {
+		List<FeatureEntry> entries = snapshot.entries();
 		Font font = ctx.fontRenderer();
 		int fontHeight = font.lineHeight;
 		int lineHeight = Math.max(1, fontHeight + config.lineSpacing);
@@ -139,7 +141,8 @@ public final class OverlayRenderer implements IRenderer {
 
 			for (int i = 0; i < labels.length; i++) {
 				FeatureEntry entry = entries.get(i);
-				int color = entry.enabled() ? config.enabledColor : config.disabledColor;
+				DiffState diffState = snapshot.diffState(entry);
+				int color = FeatureColors.colorFor(config, diffState, entry.enabled());
 				int textX = rightAligned
 					? boxLeft + boxWidth - padding - font.width(labels[i])
 					: boxLeft + padding;
